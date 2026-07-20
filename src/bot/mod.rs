@@ -4,7 +4,7 @@ pub mod notify;
 
 use teloxide::{
     prelude::*,
-    types::{BotCommand, BotCommandScope},
+    types::{BotCommand, BotCommandScope, ChatId},
 };
 
 use crate::state::AppState;
@@ -24,11 +24,33 @@ pub async fn run_bot(state: AppState) {
     ];
 
     if let Err(e) = bot
-        .set_my_commands(commands)
+        .set_my_commands(commands.clone())
         .scope(BotCommandScope::Default)
         .await
     {
-        tracing::warn!("Failed to set bot commands: {e}");
+        tracing::warn!("Failed to set default bot commands: {e}");
+    }
+
+    // Register admin commands scoped to the admin's own chat so they
+    // appear in the autocomplete only for the admin.
+    if let Some(admin_id) = state.config.admin_telegram_id {
+        let mut admin_commands = commands;
+        admin_commands.extend([
+            BotCommand::new("approve", "Admin: approve premium — /approve @user"),
+            BotCommand::new("downgrade", "Admin: downgrade to free — /downgrade @user"),
+            BotCommand::new("reject", "Admin: reject payment — /reject @user reason"),
+            BotCommand::new("stats", "Admin: platform statistics"),
+        ]);
+
+        if let Err(e) = bot
+            .set_my_commands(admin_commands)
+            .scope(BotCommandScope::Chat {
+                chat_id: ChatId(admin_id).into(),
+            })
+            .await
+        {
+            tracing::warn!("Failed to set admin bot commands: {e}");
+        }
     }
 
     let handler = dptree::entry()
@@ -52,7 +74,6 @@ pub async fn run_bot(state: AppState) {
         }));
 
     Dispatcher::builder(bot, handler)
-        .enable_ctrlc_handler()
         .build()
         .dispatch()
         .await;
