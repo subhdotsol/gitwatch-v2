@@ -543,7 +543,7 @@ pub async fn handle_command(
                  /help — Show this message\n\n\
                  <b>Watch Modes</b>\n\
                  ⚡ Webhook — Real-time notifications (requires repo admin/push access)\n\
-                 🔄 Polling — Checked every 5 minutes (always available)",
+                 🔄 Polling — Checked every 30 seconds (always available)",
             )
             .parse_mode(ParseMode::Html)
             .await?;
