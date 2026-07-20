@@ -11,7 +11,7 @@ use crate::{bot::notify, db, state::AppState};
 
 type HmacSha256 = Hmac<Sha256>;
 
-fn verify_signature(body: &[u8], signature: &str, secret: &str) -> bool {
+pub(crate) fn verify_signature(body: &[u8], signature: &str, secret: &str) -> bool {
     let sig = match signature.strip_prefix("sha256=") {
         Some(s) => s,
         None => return false,
@@ -115,4 +115,59 @@ pub async fn github_webhook(
     }
 
     (StatusCode::OK, "ok").into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+
+    fn make_sig(body: &[u8], secret: &str) -> String {
+        let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(body);
+        format!("sha256={}", hex::encode(mac.finalize().into_bytes()))
+    }
+
+    #[test]
+    fn valid_signature_accepted() {
+        let body = b"hello gitwatch";
+        let sig = make_sig(body, "my-secret");
+        assert!(verify_signature(body, &sig, "my-secret"));
+    }
+
+    #[test]
+    fn wrong_secret_rejected() {
+        let body = b"hello gitwatch";
+        let sig = make_sig(body, "correct-secret");
+        assert!(!verify_signature(body, &sig, "wrong-secret"));
+    }
+
+    #[test]
+    fn missing_sha256_prefix_rejected() {
+        // Raw hex without "sha256=" prefix
+        let raw_hex = hex::encode(b"not-a-real-mac");
+        assert!(!verify_signature(b"body", &raw_hex, "secret"));
+    }
+
+    #[test]
+    fn tampered_body_rejected() {
+        let original = b"original body";
+        let sig = make_sig(original, "secret");
+        assert!(!verify_signature(b"tampered body", &sig, "secret"));
+    }
+
+    #[test]
+    fn empty_body_valid_signature_accepted() {
+        let sig = make_sig(b"", "secret");
+        assert!(verify_signature(b"", &sig, "secret"));
+    }
+
+    #[test]
+    fn truncated_signature_rejected() {
+        let body = b"data";
+        let sig = make_sig(body, "secret");
+        let truncated = &sig[..sig.len() - 4];
+        assert!(!verify_signature(body, truncated, "secret"));
+    }
 }

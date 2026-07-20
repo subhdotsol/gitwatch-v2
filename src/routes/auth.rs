@@ -29,7 +29,7 @@ struct OAuthState {
     ts: i64,
 }
 
-fn sign_state(data: &serde_json::Value, secret: &str) -> String {
+pub(crate) fn sign_state(data: &serde_json::Value, secret: &str) -> String {
     let payload = serde_json::to_string(data).unwrap_or_default();
     let payload_b64 = URL_SAFE_NO_PAD.encode(payload.as_bytes());
 
@@ -42,7 +42,7 @@ fn sign_state(data: &serde_json::Value, secret: &str) -> String {
     format!("{payload_b64}.{sig_hex}")
 }
 
-fn verify_state(state_str: &str, secret: &str) -> Option<serde_json::Value> {
+pub(crate) fn verify_state(state_str: &str, secret: &str) -> Option<serde_json::Value> {
     let parts: Vec<&str> = state_str.splitn(2, '.').collect();
     if parts.len() != 2 {
         return None;
@@ -169,7 +169,7 @@ pub async fn github_oauth_callback(
 
     // Redirect to success page
     Html(
-        r#"<!DOCTYPE html>
+        r#"<!-- success --><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -193,4 +193,81 @@ pub async fn github_oauth_callback(
 </html>"#
         .to_string(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SECRET: &str = "test-webhook-secret-key";
+
+    fn fresh_state_token(telegram_id: i64) -> String {
+        let data = serde_json::json!({
+            "telegram_id": telegram_id,
+            "ts": chrono::Utc::now().timestamp(),
+        });
+        sign_state(&data, SECRET)
+    }
+
+    #[test]
+    fn round_trip_sign_verify() {
+        let token = fresh_state_token(123456789);
+        let result = verify_state(&token, SECRET);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["telegram_id"], 123456789_i64);
+    }
+
+    #[test]
+    fn wrong_secret_fails_verification() {
+        let token = fresh_state_token(42);
+        assert!(verify_state(&token, "wrong-secret").is_none());
+    }
+
+    #[test]
+    fn expired_timestamp_fails_verification() {
+        let data = serde_json::json!({
+            "telegram_id": 42_i64,
+            "ts": chrono::Utc::now().timestamp() - 700, // 11+ min ago
+        });
+        let token = sign_state(&data, SECRET);
+        assert!(verify_state(&token, SECRET).is_none());
+    }
+
+    #[test]
+    fn tampered_payload_fails_verification() {
+        let token = fresh_state_token(99);
+        // Flip a character in the payload part (before the dot)
+        let mut chars: Vec<char> = token.chars().collect();
+        chars[3] = if chars[3] == 'A' { 'B' } else { 'A' };
+        let tampered: String = chars.into_iter().collect();
+        assert!(verify_state(&tampered, SECRET).is_none());
+    }
+
+    #[test]
+    fn malformed_no_dot_fails() {
+        assert!(verify_state("nodotinthisstring", SECRET).is_none());
+    }
+
+    #[test]
+    fn empty_string_fails() {
+        assert!(verify_state("", SECRET).is_none());
+    }
+
+    #[test]
+    fn future_timestamp_within_limit_passes() {
+        // Small clock skew forward should still pass
+        let data = serde_json::json!({
+            "telegram_id": 77_i64,
+            "ts": chrono::Utc::now().timestamp() + 30,
+        });
+        let token = sign_state(&data, SECRET);
+        assert!(verify_state(&token, SECRET).is_some());
+    }
+
+    #[test]
+    fn different_telegram_ids_produce_different_tokens() {
+        let t1 = fresh_state_token(111);
+        let t2 = fresh_state_token(222);
+        assert_ne!(t1, t2);
+    }
 }
