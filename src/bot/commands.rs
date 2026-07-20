@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use chrono::Utc;
-use teloxide::{prelude::*, types::ParseMode, utils::command::BotCommands};
+use teloxide::{
+    prelude::*,
+    types::{BotCommand, BotCommandScope, ChatId, ParseMode},
+    utils::command::BotCommands,
+};
 
 use crate::{
     bot::{callbacks::preferences_keyboard, notify::send_telegram},
@@ -96,6 +100,36 @@ pub async fn handle_command(
                     return Ok(());
                 }
             };
+
+            // If this user is the admin, register their scoped commands now while
+            // we know the chat is live. This is more reliable than doing it at
+            // startup before the admin has interacted with the bot.
+            if is_admin(&state, telegram_id) {
+                let admin_commands = vec![
+                    BotCommand::new("start", "Connect your GitHub account"),
+                    BotCommand::new("watch", "Watch a repository"),
+                    BotCommand::new("watchlist", "View all watched repositories"),
+                    BotCommand::new("unwatch", "Stop watching a repository"),
+                    BotCommand::new("status", "Check your plan and usage"),
+                    BotCommand::new("disconnect", "Disconnect GitHub and remove all watches"),
+                    BotCommand::new("help", "Show help message"),
+                    BotCommand::new("approve", "Admin: approve premium — /approve @user"),
+                    BotCommand::new("downgrade", "Admin: downgrade to free — /downgrade @user"),
+                    BotCommand::new("reject", "Admin: reject payment — /reject @user reason"),
+                    BotCommand::new("stats", "Admin: platform statistics"),
+                ];
+                if let Err(e) = bot
+                    .set_my_commands(admin_commands)
+                    .scope(BotCommandScope::Chat {
+                        chat_id: ChatId(telegram_id).into(),
+                    })
+                    .await
+                {
+                    tracing::warn!("Failed to register admin commands on /start: {e}");
+                } else {
+                    tracing::info!("Admin commands registered for chat_id={telegram_id}");
+                }
+            }
 
             // Check for payload after "/start "
             let text = msg.text().unwrap_or("");

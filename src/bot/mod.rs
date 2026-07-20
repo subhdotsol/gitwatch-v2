@@ -34,6 +34,7 @@ pub async fn run_bot(state: AppState) {
     // Register admin commands scoped to the admin's own chat so they
     // appear in the autocomplete only for the admin.
     if let Some(admin_id) = state.config.admin_telegram_id {
+        tracing::info!("Registering admin commands for telegram_id={admin_id}");
         let mut admin_commands = commands;
         admin_commands.extend([
             BotCommand::new("approve", "Admin: approve premium — /approve @user"),
@@ -42,15 +43,18 @@ pub async fn run_bot(state: AppState) {
             BotCommand::new("stats", "Admin: platform statistics"),
         ]);
 
-        if let Err(e) = bot
+        match bot
             .set_my_commands(admin_commands)
             .scope(BotCommandScope::Chat {
                 chat_id: ChatId(admin_id).into(),
             })
             .await
         {
-            tracing::warn!("Failed to set admin bot commands: {e}");
+            Ok(_) => tracing::info!("Admin commands registered ok for chat_id={admin_id}"),
+            Err(e) => tracing::warn!("Failed to set admin bot commands for chat_id={admin_id}: {e}"),
         }
+    } else {
+        tracing::warn!("ADMIN_TELEGRAM_ID not set — admin commands will not be registered");
     }
 
     let handler = dptree::entry()

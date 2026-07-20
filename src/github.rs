@@ -244,7 +244,7 @@ pub async fn get_repo_events(
     owner: &str,
     repo: &str,
 ) -> anyhow::Result<Vec<RepoEvent>> {
-    let url = format!("https://api.github.com/repos/{owner}/{repo}/events?per_page=10");
+    let url = format!("https://api.github.com/repos/{owner}/{repo}/events?per_page=100");
     let resp = client
         .get(&url)
         .header("Authorization", format!("Bearer {token}"))
