@@ -64,7 +64,17 @@ pub async fn run() -> anyhow::Result<()> {
     let router = routes::create_router(app_state);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
     tracing::info!("Server listening on port {port}");
-    axum::serve(listener, router).await?;
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
+    tracing::info!("Shutdown complete");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("failed to install Ctrl+C handler");
+    tracing::info!("Shutting down...");
 }
