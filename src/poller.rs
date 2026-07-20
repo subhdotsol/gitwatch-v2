@@ -97,7 +97,10 @@ async fn poll_repo(state: &AppState, repo: &crate::models::WatchedRepoWithUser) 
             // First poll: establish baseline so we don't flood with historical events.
             if since.is_none() {
                 if let Err(e) = db::update_last_polled(&state.db, repo.id).await {
-                    error!("Failed to set initial last_polled for {}/{}: {e}", repo.owner, repo.repo);
+                    error!(
+                        "Failed to set initial last_polled for {}/{}: {e}",
+                        repo.owner, repo.repo
+                    );
                 }
                 return;
             }

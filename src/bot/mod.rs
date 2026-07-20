@@ -51,7 +51,9 @@ pub async fn run_bot(state: AppState) {
             .await
         {
             Ok(_) => tracing::info!("Admin commands registered ok for chat_id={admin_id}"),
-            Err(e) => tracing::warn!("Failed to set admin bot commands for chat_id={admin_id}: {e}"),
+            Err(e) => {
+                tracing::warn!("Failed to set admin bot commands for chat_id={admin_id}: {e}")
+            }
         }
     } else {
         tracing::warn!("ADMIN_TELEGRAM_ID not set — admin commands will not be registered");
