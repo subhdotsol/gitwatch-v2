@@ -32,6 +32,7 @@ pub async fn run() -> anyhow::Result<()> {
 
     let db = PgPoolOptions::new()
         .max_connections(10)
+        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&config.database_url)
         .await?;
 

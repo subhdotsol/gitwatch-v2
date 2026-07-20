@@ -9,7 +9,9 @@ async fn upsert_creates_new_user() {
     let state = helpers::setup().await;
     let tid = helpers::rand_telegram_id();
 
-    let user = db::upsert_user(&state.db, tid, Some("testbot")).await.unwrap();
+    let user = db::upsert_user(&state.db, tid, Some("testbot"))
+        .await
+        .unwrap();
     assert_eq!(user.telegram_id, tid);
     assert_eq!(user.telegram_username.as_deref(), Some("testbot"));
     assert_eq!(user.plan, "free");
@@ -23,8 +25,12 @@ async fn upsert_updates_username_on_conflict() {
     let state = helpers::setup().await;
     let tid = helpers::rand_telegram_id();
 
-    let u1 = db::upsert_user(&state.db, tid, Some("oldname")).await.unwrap();
-    let u2 = db::upsert_user(&state.db, tid, Some("newname")).await.unwrap();
+    let u1 = db::upsert_user(&state.db, tid, Some("oldname"))
+        .await
+        .unwrap();
+    let u2 = db::upsert_user(&state.db, tid, Some("newname"))
+        .await
+        .unwrap();
 
     assert_eq!(u1.id, u2.id, "should be the same DB row");
     assert_eq!(u2.telegram_username.as_deref(), Some("newname"));
@@ -35,7 +41,9 @@ async fn upsert_updates_username_on_conflict() {
 #[tokio::test]
 async fn find_user_by_telegram_id_returns_none_for_unknown() {
     let state = helpers::setup().await;
-    let result = db::find_user_by_telegram_id(&state.db, 999_999_999_999).await.unwrap();
+    let result = db::find_user_by_telegram_id(&state.db, 999_999_999_999)
+        .await
+        .unwrap();
     assert!(result.is_none());
 }
 
@@ -44,7 +52,9 @@ async fn find_user_by_telegram_id_returns_existing_user() {
     let state = helpers::setup().await;
     let tid = helpers::rand_telegram_id();
 
-    db::upsert_user(&state.db, tid, Some("findme")).await.unwrap();
+    db::upsert_user(&state.db, tid, Some("findme"))
+        .await
+        .unwrap();
     let found = db::find_user_by_telegram_id(&state.db, tid).await.unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().telegram_id, tid);
@@ -58,7 +68,9 @@ async fn update_user_github_stores_token_and_username() {
     let tid = helpers::rand_telegram_id();
 
     db::upsert_user(&state.db, tid, Some("user")).await.unwrap();
-    let updated = db::update_user_github(&state.db, tid, "ghu_token123", "ghuser").await.unwrap();
+    let updated = db::update_user_github(&state.db, tid, "ghu_token123", "ghuser")
+        .await
+        .unwrap();
 
     assert_eq!(updated.github_token.as_deref(), Some("ghu_token123"));
     assert_eq!(updated.github_username.as_deref(), Some("ghuser"));
@@ -103,9 +115,14 @@ async fn set_user_plan_updates_to_premium() {
 
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
     let expires = chrono::Utc::now() + chrono::Duration::days(30);
-    db::set_user_plan(&state.db, user.id, "premium", Some(expires)).await.unwrap();
+    db::set_user_plan(&state.db, user.id, "premium", Some(expires))
+        .await
+        .unwrap();
 
-    let refreshed = db::find_user_by_telegram_id(&state.db, tid).await.unwrap().unwrap();
+    let refreshed = db::find_user_by_telegram_id(&state.db, tid)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(refreshed.plan, "premium");
     assert!(refreshed.plan_expires_at.is_some());
 
@@ -118,10 +135,17 @@ async fn disconnect_github_clears_token_and_username() {
     let tid = helpers::rand_telegram_id();
 
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
-    db::update_user_github(&state.db, tid, "tok", "ghuser").await.unwrap();
-    db::disconnect_user_github(&state.db, user.id).await.unwrap();
+    db::update_user_github(&state.db, tid, "tok", "ghuser")
+        .await
+        .unwrap();
+    db::disconnect_user_github(&state.db, user.id)
+        .await
+        .unwrap();
 
-    let refreshed = db::find_user_by_telegram_id(&state.db, tid).await.unwrap().unwrap();
+    let refreshed = db::find_user_by_telegram_id(&state.db, tid)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(refreshed.github_token.is_none());
     assert!(refreshed.github_username.is_none());
 
@@ -164,9 +188,16 @@ async fn create_watched_repo_with_webhook_id() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    let repo = db::create_watched_repo(&state.db, user.id, "owner", "wh-repo", Some(12345), "webhook")
-        .await
-        .unwrap();
+    let repo = db::create_watched_repo(
+        &state.db,
+        user.id,
+        "owner",
+        "wh-repo",
+        Some(12345),
+        "webhook",
+    )
+    .await
+    .unwrap();
 
     assert_eq!(repo.webhook_id, Some(12345));
     assert_eq!(repo.watch_mode, "webhook");
@@ -180,14 +211,33 @@ async fn count_active_repos_increments_and_stops_after_deactivate() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    assert_eq!(db::count_active_repos_for_user(&state.db, user.id).await.unwrap(), 0);
+    assert_eq!(
+        db::count_active_repos_for_user(&state.db, user.id)
+            .await
+            .unwrap(),
+        0
+    );
 
-    let r1 = db::create_watched_repo(&state.db, user.id, "o", "r1", None, "polling").await.unwrap();
-    let _r2 = db::create_watched_repo(&state.db, user.id, "o", "r2", None, "polling").await.unwrap();
-    assert_eq!(db::count_active_repos_for_user(&state.db, user.id).await.unwrap(), 2);
+    let r1 = db::create_watched_repo(&state.db, user.id, "o", "r1", None, "polling")
+        .await
+        .unwrap();
+    let _r2 = db::create_watched_repo(&state.db, user.id, "o", "r2", None, "polling")
+        .await
+        .unwrap();
+    assert_eq!(
+        db::count_active_repos_for_user(&state.db, user.id)
+            .await
+            .unwrap(),
+        2
+    );
 
     db::deactivate_watched_repo(&state.db, r1.id).await.unwrap();
-    assert_eq!(db::count_active_repos_for_user(&state.db, user.id).await.unwrap(), 1);
+    assert_eq!(
+        db::count_active_repos_for_user(&state.db, user.id)
+            .await
+            .unwrap(),
+        1
+    );
 
     helpers::cleanup_user(&state.db, tid).await;
 }
@@ -198,7 +248,9 @@ async fn find_watched_repo_returns_none_for_unknown() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    let found = db::find_watched_repo(&state.db, user.id, "nobody", "norepo").await.unwrap();
+    let found = db::find_watched_repo(&state.db, user.id, "nobody", "norepo")
+        .await
+        .unwrap();
     assert!(found.is_none());
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -210,11 +262,17 @@ async fn get_user_watched_repos_returns_only_active() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    let r1 = db::create_watched_repo(&state.db, user.id, "o", "active", None, "polling").await.unwrap();
-    let r2 = db::create_watched_repo(&state.db, user.id, "o", "inactive", None, "polling").await.unwrap();
+    let r1 = db::create_watched_repo(&state.db, user.id, "o", "active", None, "polling")
+        .await
+        .unwrap();
+    let r2 = db::create_watched_repo(&state.db, user.id, "o", "inactive", None, "polling")
+        .await
+        .unwrap();
     db::deactivate_watched_repo(&state.db, r2.id).await.unwrap();
 
-    let repos = db::get_user_watched_repos(&state.db, user.id).await.unwrap();
+    let repos = db::get_user_watched_repos(&state.db, user.id)
+        .await
+        .unwrap();
     assert_eq!(repos.len(), 1);
     assert_eq!(repos[0].id, r1.id);
 
@@ -227,12 +285,18 @@ async fn delete_all_user_repos_removes_everything() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    db::create_watched_repo(&state.db, user.id, "o", "r1", None, "polling").await.unwrap();
-    db::create_watched_repo(&state.db, user.id, "o", "r2", None, "polling").await.unwrap();
+    db::create_watched_repo(&state.db, user.id, "o", "r1", None, "polling")
+        .await
+        .unwrap();
+    db::create_watched_repo(&state.db, user.id, "o", "r2", None, "polling")
+        .await
+        .unwrap();
 
     db::delete_all_user_repos(&state.db, user.id).await.unwrap();
 
-    let repos = db::get_user_watched_repos(&state.db, user.id).await.unwrap();
+    let repos = db::get_user_watched_repos(&state.db, user.id)
+        .await
+        .unwrap();
     assert!(repos.is_empty());
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -250,9 +314,13 @@ async fn toggle_notify_issues_flips_value() {
         .unwrap();
 
     assert!(repo.notify_issues);
-    let updated = db::toggle_notify_field(&state.db, repo.id, "issues").await.unwrap();
+    let updated = db::toggle_notify_field(&state.db, repo.id, "issues")
+        .await
+        .unwrap();
     assert!(!updated.notify_issues);
-    let toggled_back = db::toggle_notify_field(&state.db, repo.id, "issues").await.unwrap();
+    let toggled_back = db::toggle_notify_field(&state.db, repo.id, "issues")
+        .await
+        .unwrap();
     assert!(toggled_back.notify_issues);
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -267,7 +335,9 @@ async fn toggle_notify_prs_flips_value() {
         .await
         .unwrap();
 
-    let updated = db::toggle_notify_field(&state.db, repo.id, "prs").await.unwrap();
+    let updated = db::toggle_notify_field(&state.db, repo.id, "prs")
+        .await
+        .unwrap();
     assert!(!updated.notify_prs);
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -282,7 +352,9 @@ async fn toggle_notify_commits_flips_value() {
         .await
         .unwrap();
 
-    let updated = db::toggle_notify_field(&state.db, repo.id, "commits").await.unwrap();
+    let updated = db::toggle_notify_field(&state.db, repo.id, "commits")
+        .await
+        .unwrap();
     assert!(!updated.notify_commits);
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -297,7 +369,9 @@ async fn toggle_notify_comments_flips_value() {
         .await
         .unwrap();
 
-    let updated = db::toggle_notify_field(&state.db, repo.id, "comments").await.unwrap();
+    let updated = db::toggle_notify_field(&state.db, repo.id, "comments")
+        .await
+        .unwrap();
     assert!(!updated.notify_comments);
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -326,8 +400,12 @@ async fn get_polling_repos_returns_only_polling_mode() {
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
-    db::create_watched_repo(&state.db, user.id, "o", "poll-repo", None, "polling").await.unwrap();
-    db::create_watched_repo(&state.db, user.id, "o", "wh-repo", Some(99), "webhook").await.unwrap();
+    db::create_watched_repo(&state.db, user.id, "o", "poll-repo", None, "polling")
+        .await
+        .unwrap();
+    db::create_watched_repo(&state.db, user.id, "o", "wh-repo", Some(99), "webhook")
+        .await
+        .unwrap();
 
     let polling = db::get_polling_repos(&state.db, 100).await.unwrap();
     let my_repos: Vec<_> = polling.iter().filter(|r| r.user_id == user.id).collect();
@@ -350,7 +428,10 @@ async fn update_last_polled_sets_timestamp() {
     assert!(repo.last_polled.is_none());
     db::update_last_polled(&state.db, repo.id).await.unwrap();
 
-    let refreshed = db::find_watched_repo_by_id(&state.db, repo.id).await.unwrap().unwrap();
+    let refreshed = db::find_watched_repo_by_id(&state.db, repo.id)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(refreshed.last_polled.is_some());
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -363,7 +444,9 @@ async fn find_repos_by_owner_repo_returns_watchers_with_user_info() {
     let state = helpers::setup().await;
     let tid = helpers::rand_telegram_id();
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
-    db::update_user_github(&state.db, tid, "tok_abc", "ghuser").await.unwrap();
+    db::update_user_github(&state.db, tid, "tok_abc", "ghuser")
+        .await
+        .unwrap();
 
     db::create_watched_repo(&state.db, user.id, "torvalds", "linux", None, "polling")
         .await
@@ -374,7 +457,10 @@ async fn find_repos_by_owner_repo_returns_watchers_with_user_info() {
         .unwrap();
 
     // There might be other test users watching linux; find ours
-    let ours: Vec<_> = watchers.iter().filter(|w| w.user_telegram_id == tid).collect();
+    let ours: Vec<_> = watchers
+        .iter()
+        .filter(|w| w.user_telegram_id == tid)
+        .collect();
     assert_eq!(ours.len(), 1);
     assert_eq!(ours[0].user_github_token.as_deref(), Some("tok_abc"));
     assert_eq!(ours[0].user_github_username.as_deref(), Some("ghuser"));
@@ -391,13 +477,18 @@ async fn find_repos_by_owner_repo_excludes_inactive() {
     let repo = db::create_watched_repo(&state.db, user.id, "o", "inactive-check", None, "polling")
         .await
         .unwrap();
-    db::deactivate_watched_repo(&state.db, repo.id).await.unwrap();
+    db::deactivate_watched_repo(&state.db, repo.id)
+        .await
+        .unwrap();
 
     let watchers = db::find_repos_by_owner_repo(&state.db, "o", "inactive-check")
         .await
         .unwrap();
 
-    let ours: Vec<_> = watchers.iter().filter(|w| w.user_telegram_id == tid).collect();
+    let ours: Vec<_> = watchers
+        .iter()
+        .filter(|w| w.user_telegram_id == tid)
+        .collect();
     assert!(ours.is_empty(), "inactive repo should not appear");
 
     helpers::cleanup_user(&state.db, tid).await;
@@ -432,7 +523,9 @@ async fn count_premium_users_only_counts_premium() {
     let user = db::upsert_user(&state.db, tid, None).await.unwrap();
 
     let before = db::count_premium_users(&state.db).await.unwrap();
-    db::set_user_plan(&state.db, user.id, "premium", None).await.unwrap();
+    db::set_user_plan(&state.db, user.id, "premium", None)
+        .await
+        .unwrap();
     let after = db::count_premium_users(&state.db).await.unwrap();
 
     assert!(after > before, "premium count should have increased");

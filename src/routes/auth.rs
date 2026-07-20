@@ -33,8 +33,8 @@ pub(crate) fn sign_state(data: &serde_json::Value, secret: &str) -> String {
     let payload = serde_json::to_string(data).unwrap_or_default();
     let payload_b64 = URL_SAFE_NO_PAD.encode(payload.as_bytes());
 
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(payload_b64.as_bytes());
     let sig = mac.finalize().into_bytes();
     let sig_hex = hex::encode(sig);
@@ -147,9 +147,7 @@ pub async fn github_oauth_callback(
     };
 
     // Store in DB
-    if let Err(e) =
-        db::update_user_github(&state.db, telegram_id, &token, &gh_user.login).await
-    {
+    if let Err(e) = db::update_user_github(&state.db, telegram_id, &token, &gh_user.login).await {
         tracing::error!("Failed to update user GitHub: {e}");
         return Html(format!(
             "<html><body><h1>Error</h1><p>Database error: {e}</p></body></html>"
@@ -191,7 +189,7 @@ pub async fn github_oauth_callback(
     </div>
 </body>
 </html>"#
-        .to_string(),
+            .to_string(),
     )
 }
 

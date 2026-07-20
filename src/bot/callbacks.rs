@@ -24,7 +24,10 @@ pub fn preferences_keyboard(repo: &WatchedRepo) -> InlineKeyboardMarkup {
                 format!("notify:commits:{}", repo.id),
             ),
             InlineKeyboardButton::callback(
-                format!("{} Comments", if repo.notify_comments { "✅" } else { "❌" }),
+                format!(
+                    "{} Comments",
+                    if repo.notify_comments { "✅" } else { "❌" }
+                ),
                 format!("notify:comments:{}", repo.id),
             ),
         ],
@@ -43,21 +46,27 @@ pub async fn handle_callback(bot: Bot, q: CallbackQuery, state: AppState) -> any
     let parts: Vec<&str> = data.splitn(3, ':').collect();
 
     if parts.len() < 2 {
-        bot.answer_callback_query(&q.id).text("Unknown action").await?;
+        bot.answer_callback_query(&q.id)
+            .text("Unknown action")
+            .await?;
         return Ok(());
     }
 
     match parts[0] {
         "notify" => {
             if parts.len() < 3 {
-                bot.answer_callback_query(&q.id).text("Invalid callback").await?;
+                bot.answer_callback_query(&q.id)
+                    .text("Invalid callback")
+                    .await?;
                 return Ok(());
             }
             let field = parts[1];
             let repo_id = match Uuid::parse_str(parts[2]) {
                 Ok(id) => id,
                 Err(_) => {
-                    bot.answer_callback_query(&q.id).text("Invalid repo ID").await?;
+                    bot.answer_callback_query(&q.id)
+                        .text("Invalid repo ID")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -116,13 +125,17 @@ pub async fn handle_callback(bot: Bot, q: CallbackQuery, state: AppState) -> any
         }
         "manage" => {
             if parts.len() < 2 {
-                bot.answer_callback_query(&q.id).text("Invalid callback").await?;
+                bot.answer_callback_query(&q.id)
+                    .text("Invalid callback")
+                    .await?;
                 return Ok(());
             }
             let repo_id = match Uuid::parse_str(parts[1]) {
                 Ok(id) => id,
                 Err(_) => {
-                    bot.answer_callback_query(&q.id).text("Invalid repo ID").await?;
+                    bot.answer_callback_query(&q.id)
+                        .text("Invalid repo ID")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -146,16 +159,22 @@ pub async fn handle_callback(bot: Bot, q: CallbackQuery, state: AppState) -> any
                     bot.answer_callback_query(&q.id).await?;
                 }
                 Ok(None) => {
-                    bot.answer_callback_query(&q.id).text("Repo not found").await?;
+                    bot.answer_callback_query(&q.id)
+                        .text("Repo not found")
+                        .await?;
                 }
                 Err(e) => {
                     tracing::error!("Failed to find repo: {e}");
-                    bot.answer_callback_query(&q.id).text("Error loading repo").await?;
+                    bot.answer_callback_query(&q.id)
+                        .text("Error loading repo")
+                        .await?;
                 }
             }
         }
         _ => {
-            bot.answer_callback_query(&q.id).text("Unknown action").await?;
+            bot.answer_callback_query(&q.id)
+                .text("Unknown action")
+                .await?;
         }
     }
 

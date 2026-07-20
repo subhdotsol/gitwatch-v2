@@ -1,11 +1,7 @@
 use std::time::Duration;
 
 use chrono::Utc;
-use teloxide::{
-    prelude::*,
-    types::ParseMode,
-    utils::command::BotCommands,
-};
+use teloxide::{prelude::*, types::ParseMode, utils::command::BotCommands};
 
 use crate::{
     bot::{callbacks::preferences_keyboard, notify::send_telegram},
@@ -151,9 +147,11 @@ pub async fn handle_command(
 
         Command::Watch(input) => {
             // Rate limit: 5 per 60s per user
-            let rl = state
-                .rate_limiter
-                .check(&format!("watch:{telegram_id}"), 5, Duration::from_secs(60));
+            let rl = state.rate_limiter.check(
+                &format!("watch:{telegram_id}"),
+                5,
+                Duration::from_secs(60),
+            );
             if !rl.allowed {
                 bot.send_message(
                     msg.chat.id,
@@ -166,7 +164,8 @@ pub async fn handle_command(
             let user = match db::find_user_by_telegram_id(&state.db, telegram_id).await? {
                 Some(u) => u,
                 None => {
-                    bot.send_message(msg.chat.id, "Please use /start first.").await?;
+                    bot.send_message(msg.chat.id, "Please use /start first.")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -175,8 +174,8 @@ pub async fn handle_command(
                 bot.send_message(
                     msg.chat.id,
                     format!(
-                        "❌ GitHub not connected. Use /start to connect.\n{}",
-                        format!("{}/api/auth/github?telegram_id={}", state.config.app_url, telegram_id)
+                        "❌ GitHub not connected. Use /start to connect.\n{}/api/auth/github?telegram_id={}",
+                        state.config.app_url, telegram_id
                     ),
                 )
                 .await?;
@@ -218,7 +217,8 @@ pub async fn handle_command(
                 .await?;
 
             // Check if already watching
-            if let Some(existing) = db::find_watched_repo(&state.db, user.id, &owner, &repo).await? {
+            if let Some(existing) = db::find_watched_repo(&state.db, user.id, &owner, &repo).await?
+            {
                 if existing.active {
                     let keyboard = preferences_keyboard(&existing);
                     bot.edit_message_text(
@@ -289,15 +289,9 @@ pub async fn handle_command(
                 (None, "polling")
             };
 
-            let watched = db::create_watched_repo(
-                &state.db,
-                user.id,
-                &owner,
-                &repo,
-                webhook_id,
-                watch_mode,
-            )
-            .await?;
+            let watched =
+                db::create_watched_repo(&state.db, user.id, &owner, &repo, webhook_id, watch_mode)
+                    .await?;
 
             let mode_label = if watch_mode == "webhook" {
                 "Real-time (webhook)"
@@ -325,7 +319,8 @@ pub async fn handle_command(
             let user = match db::find_user_by_telegram_id(&state.db, telegram_id).await? {
                 Some(u) => u,
                 None => {
-                    bot.send_message(msg.chat.id, "Please use /start first.").await?;
+                    bot.send_message(msg.chat.id, "Please use /start first.")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -348,7 +343,11 @@ pub async fn handle_command(
             )];
 
             for (i, r) in repos.iter().enumerate() {
-                let mode_icon = if r.watch_mode == "webhook" { "⚡" } else { "🔄" };
+                let mode_icon = if r.watch_mode == "webhook" {
+                    "⚡"
+                } else {
+                    "🔄"
+                };
                 lines.push(format!(
                     "{}. {mode_icon} <code>{}/{}</code>",
                     i + 1,
@@ -368,7 +367,8 @@ pub async fn handle_command(
             let user = match db::find_user_by_telegram_id(&state.db, telegram_id).await? {
                 Some(u) => u,
                 None => {
-                    bot.send_message(msg.chat.id, "Please use /start first.").await?;
+                    bot.send_message(msg.chat.id, "Please use /start first.")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -418,11 +418,8 @@ pub async fn handle_command(
             let user = match db::find_user_by_telegram_id(&state.db, telegram_id).await? {
                 Some(u) => u,
                 None => {
-                    bot.send_message(
-                        msg.chat.id,
-                        "No account found. Use /start to get started.",
-                    )
-                    .await?;
+                    bot.send_message(msg.chat.id, "No account found. Use /start to get started.")
+                        .await?;
                     return Ok(());
                 }
             };
@@ -475,9 +472,14 @@ pub async fn handle_command(
             let repos = db::get_user_watched_repos(&state.db, user.id).await?;
             for r in repos {
                 if let (Some(webhook_id), Some(token)) = (r.webhook_id, &user.github_token) {
-                    if let Err(e) =
-                        github::delete_webhook(&state.http_client, token, &r.owner, &r.repo, webhook_id)
-                            .await
+                    if let Err(e) = github::delete_webhook(
+                        &state.http_client,
+                        token,
+                        &r.owner,
+                        &r.repo,
+                        webhook_id,
+                    )
+                    .await
                     {
                         tracing::warn!("Failed to delete webhook {webhook_id}: {e}");
                     }
@@ -551,7 +553,10 @@ pub async fn handle_command(
 
                     bot.send_message(
                         msg.chat.id,
-                        format!("✅ Approved premium for {target} until {}", expires.format("%Y-%m-%d")),
+                        format!(
+                            "✅ Approved premium for {target} until {}",
+                            expires.format("%Y-%m-%d")
+                        ),
                     )
                     .await?;
                 }

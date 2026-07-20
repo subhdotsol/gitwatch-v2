@@ -24,7 +24,12 @@ async fn health_endpoint_returns_200() {
     let app = create_router(state);
 
     let resp = app
-        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
@@ -138,7 +143,8 @@ async fn webhook_with_valid_signature_no_watchers_returns_200() {
     let app = create_router(state);
 
     // A repo that nobody is watching
-    let body = r#"{"repository":{"owner":{"login":"nonexistent-org-xyz"},"name":"nonexistent-repo-xyz"}}"#;
+    let body =
+        r#"{"repository":{"owner":{"login":"nonexistent-org-xyz"},"name":"nonexistent-repo-xyz"}}"#;
     let sig = sign_body(body.as_bytes(), &secret);
 
     let resp = app

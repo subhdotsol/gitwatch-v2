@@ -52,10 +52,7 @@ pub async fn github_webhook(
     }
 
     // Get event type
-    let event = match headers
-        .get("x-github-event")
-        .and_then(|v| v.to_str().ok())
-    {
+    let event = match headers.get("x-github-event").and_then(|v| v.to_str().ok()) {
         Some(e) => e.to_string(),
         None => {
             return (StatusCode::BAD_REQUEST, "Missing x-github-event header").into_response();

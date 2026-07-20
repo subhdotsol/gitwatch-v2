@@ -73,8 +73,5 @@ pub async fn run_bot(state: AppState) {
             }
         }));
 
-    Dispatcher::builder(bot, handler)
-        .build()
-        .dispatch()
-        .await;
+    Dispatcher::builder(bot, handler).build().dispatch().await;
 }

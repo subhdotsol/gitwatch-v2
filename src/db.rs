@@ -10,21 +10,29 @@ pub struct PlatformStats {
     pub active_repos: i64,
 }
 
-pub async fn find_user_by_telegram_id(pool: &PgPool, telegram_id: i64) -> anyhow::Result<Option<User>> {
-    let user = sqlx::query_as::<_, User>(
-        "SELECT * FROM users WHERE telegram_id = $1",
-    )
-    .bind(telegram_id)
-    .fetch_optional(pool)
-    .await?;
+pub async fn find_user_by_telegram_id(
+    pool: &PgPool,
+    telegram_id: i64,
+) -> anyhow::Result<Option<User>> {
+    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE telegram_id = $1")
+        .bind(telegram_id)
+        .fetch_optional(pool)
+        .await?;
     Ok(user)
 }
 
-pub async fn find_user_by_telegram_id_exact(pool: &PgPool, id: i64) -> anyhow::Result<Option<User>> {
+pub async fn find_user_by_telegram_id_exact(
+    pool: &PgPool,
+    id: i64,
+) -> anyhow::Result<Option<User>> {
     find_user_by_telegram_id(pool, id).await
 }
 
-pub async fn upsert_user(pool: &PgPool, telegram_id: i64, username: Option<&str>) -> anyhow::Result<User> {
+pub async fn upsert_user(
+    pool: &PgPool,
+    telegram_id: i64,
+    username: Option<&str>,
+) -> anyhow::Result<User> {
     let user = sqlx::query_as::<_, User>(
         r#"
         INSERT INTO users (telegram_id, telegram_username)
@@ -88,7 +96,10 @@ pub async fn find_watched_repo(
     Ok(r)
 }
 
-pub async fn find_watched_repo_by_id(pool: &PgPool, id: Uuid) -> anyhow::Result<Option<WatchedRepo>> {
+pub async fn find_watched_repo_by_id(
+    pool: &PgPool,
+    id: Uuid,
+) -> anyhow::Result<Option<WatchedRepo>> {
     let r = sqlx::query_as::<_, WatchedRepo>("SELECT * FROM watched_repos WHERE id = $1")
         .bind(id)
         .fetch_optional(pool)
@@ -97,12 +108,11 @@ pub async fn find_watched_repo_by_id(pool: &PgPool, id: Uuid) -> anyhow::Result<
 }
 
 pub async fn count_active_repos_for_user(pool: &PgPool, user_id: Uuid) -> anyhow::Result<i64> {
-    let row: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM watched_repos WHERE user_id = $1 AND active = true",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await?;
+    let row: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM watched_repos WHERE user_id = $1 AND active = true")
+            .bind(user_id)
+            .fetch_one(pool)
+            .await?;
     Ok(row.0)
 }
 
@@ -133,7 +143,10 @@ pub async fn create_watched_repo(
     Ok(r)
 }
 
-pub async fn get_user_watched_repos(pool: &PgPool, user_id: Uuid) -> anyhow::Result<Vec<WatchedRepo>> {
+pub async fn get_user_watched_repos(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> anyhow::Result<Vec<WatchedRepo>> {
     let repos = sqlx::query_as::<_, WatchedRepo>(
         "SELECT * FROM watched_repos WHERE user_id = $1 AND active = true ORDER BY created_at ASC",
     )
@@ -195,7 +208,10 @@ pub async fn find_repos_by_owner_repo(
     Ok(repos)
 }
 
-pub async fn get_polling_repos(pool: &PgPool, limit: i64) -> anyhow::Result<Vec<WatchedRepoWithUser>> {
+pub async fn get_polling_repos(
+    pool: &PgPool,
+    limit: i64,
+) -> anyhow::Result<Vec<WatchedRepoWithUser>> {
     let repos = sqlx::query_as::<_, WatchedRepoWithUser>(
         r#"
         SELECT
@@ -226,7 +242,11 @@ pub async fn update_last_polled(pool: &PgPool, id: Uuid) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn toggle_notify_field(pool: &PgPool, repo_id: Uuid, field: &str) -> anyhow::Result<WatchedRepo> {
+pub async fn toggle_notify_field(
+    pool: &PgPool,
+    repo_id: Uuid,
+    field: &str,
+) -> anyhow::Result<WatchedRepo> {
     let r = match field {
         "issues" => {
             sqlx::query_as::<_, WatchedRepo>(
@@ -310,11 +330,9 @@ pub async fn count_premium_users(pool: &PgPool) -> anyhow::Result<i64> {
 }
 
 pub async fn find_user_by_username(pool: &PgPool, username: &str) -> anyhow::Result<Option<User>> {
-    let user = sqlx::query_as::<_, User>(
-        "SELECT * FROM users WHERE telegram_username = $1",
-    )
-    .bind(username)
-    .fetch_optional(pool)
-    .await?;
+    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE telegram_username = $1")
+        .bind(username)
+        .fetch_optional(pool)
+        .await?;
     Ok(user)
 }

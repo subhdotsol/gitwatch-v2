@@ -82,7 +82,10 @@ pub async fn get_repo(
         anyhow::bail!("GitHub API error {status}: {body}");
     }
 
-    let repo_data = resp.json::<GitHubRepo>().await.context("failed to parse repo")?;
+    let repo_data = resp
+        .json::<GitHubRepo>()
+        .await
+        .context("failed to parse repo")?;
     Ok(repo_data)
 }
 
@@ -173,10 +176,7 @@ pub async fn delete_webhook(
     Ok(())
 }
 
-pub async fn get_github_user(
-    client: &reqwest::Client,
-    token: &str,
-) -> anyhow::Result<GitHubUser> {
+pub async fn get_github_user(client: &reqwest::Client, token: &str) -> anyhow::Result<GitHubUser> {
     let resp = client
         .get("https://api.github.com/user")
         .header("Authorization", format!("Bearer {token}"))
@@ -191,7 +191,10 @@ pub async fn get_github_user(
         anyhow::bail!("GitHub user API error {status}: {body}");
     }
 
-    let user = resp.json::<GitHubUser>().await.context("failed to parse github user")?;
+    let user = resp
+        .json::<GitHubUser>()
+        .await
+        .context("failed to parse github user")?;
     Ok(user)
 }
 

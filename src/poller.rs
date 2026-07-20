@@ -26,10 +26,7 @@ async fn poll_all(state: &AppState) -> anyhow::Result<()> {
 
     // Process in chunks of 10 concurrently
     for chunk in repos.chunks(10) {
-        let futures: Vec<_> = chunk
-            .iter()
-            .map(|repo| poll_repo(state, repo))
-            .collect();
+        let futures: Vec<_> = chunk.iter().map(|repo| poll_repo(state, repo)).collect();
 
         futures::future::join_all(futures).await;
     }
@@ -49,13 +46,8 @@ async fn poll_repo(state: &AppState, repo: &crate::models::WatchedRepoWithUser) 
         }
     };
 
-    let events_result = github::get_repo_events(
-        &state.http_client,
-        &token,
-        &repo.owner,
-        &repo.repo,
-    )
-    .await;
+    let events_result =
+        github::get_repo_events(&state.http_client, &token, &repo.owner, &repo.repo).await;
 
     match events_result {
         Err(e) => {
@@ -81,10 +73,7 @@ async fn poll_repo(state: &AppState, repo: &crate::models::WatchedRepoWithUser) 
                 )
                 .await;
             } else if err_str.contains("404") {
-                warn!(
-                    "Repo not found {}/{}: {}",
-                    repo.owner, repo.repo, e
-                );
+                warn!("Repo not found {}/{}: {}", repo.owner, repo.repo, e);
                 if let Err(de) = db::deactivate_watched_repo(&state.db, repo.id).await {
                     error!("Failed to deactivate repo {}: {de}", repo.id);
                 }
